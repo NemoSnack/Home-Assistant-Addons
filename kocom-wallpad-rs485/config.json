@@ -1,7 +1,7 @@
 {
-  "name": "Kocom Wallpad with RS485",
-  "version": "2026.11.08.1",
-  "slug": "kocom_py",
+  "name": "Kocom Wallpad with RS485 (Custom)",
+  "version": "2026.11.21.1",
+  "slug": "kocom_py_nemosnack",
   "description": "Kocom Wallpad for Home Assistant",
   "arch": [
     "armhf",
@@ -33,10 +33,13 @@
     "devices": [
       {"type": "light",  "room": "livingroom"},
       {"type": "light",  "room": "livingroom"},
+      {"type": "light",  "room": "livingroom"},
       {"type": "light",  "room": "room1"},
       {"type": "light",  "room": "room1"},
       {"type": "light",  "room": "room2"},
       {"type": "light",  "room": "room3"},
+      {"type": "light",  "room": "room4"},
+      {"type": "light",  "room": "kitchen"},
       {"type": "light",  "room": "kitchen"},
       {"type": "light",  "room": "kitchen"},
       {"type": "fan",    "room": "livingroom"},
@@ -61,8 +64,8 @@
       {"type": "outlet",  "room": "kitchen"}
     ],
     "elevator_type": "rs485",
-    "rs485_floor": 7,
-    "init_temp": 23,
+    "rs485_floor": 18,
+    "init_temp": 22,
     "away_mode": "entrance",
     "away_gas_room": "livingroom",
     "log_recv_hex": false,
@@ -81,7 +84,7 @@
     "devices": [
       {
         "type": "list(light|outlet|fan|thermo|aircon|gas|elevator|motion|airquality)",
-        "room": "list(livingroom|room1|room2|room3|kitchen)?"
+        "room": "list(livingroom|room1|room2|room3|room4|kitchen)?"
       }
     ],
     "elevator_type": "list(rs485|tcpip)",

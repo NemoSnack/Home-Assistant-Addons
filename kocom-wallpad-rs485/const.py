@@ -67,7 +67,8 @@ ROOM_NAME: dict[int, str] = {
     0x01: 'room1',
     0x02: 'room2',
     0x03: 'room3',
-    0x04: 'kitchen',
+    0x04: 'room4',       # 사용자 실측: 기존 kitchen 엔티티가 실제 방4를 제어
+    0x05: 'kitchen',     # 사용자 실측: 주방 조명 모듈의 발신 방 코드
 }
 ROOM_CODE: dict[str, int] = {v: k for k, v in ROOM_NAME.items()}
 

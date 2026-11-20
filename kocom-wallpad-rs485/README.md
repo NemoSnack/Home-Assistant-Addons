@@ -32,7 +32,7 @@ RS485 신호를 MQTT로 브리징하여 HA에서 직접 장치를 제어하고 �
 1. HA 웹UI → **설정 → 애드온 → 애드온 스토어** → 우측 상단 ⋮ → **저장소 추가**
 2. 저장소 URL 입력 후 추가:
    ```
-   https://github.com/iuscaler/kocom_wallpad_app_for_homeassistant
+   https://github.com/NemoSnack/Home-Assistant-Addons
    ```
 3. 애드온 스토어 하단의 **Kocom Wallpad with RS485** 클릭 → **설치**
 4. 설치 완료 후 **설정** 탭에서 환경에 맞게 옵션 구성
@@ -72,7 +72,7 @@ MQTT 서버 주소를 비워두면 Supervisor 서비스 API를 통해 브로커 
 `devices` 항목에서 제어할 장치를 추가합니다.
 
 - **type**: 장치 종류 선택 (`light`, `outlet`, `fan`, `thermo`, `aircon`, `gas`, `elevator`, `motion`, `airquality`)
-- **room**: 방 선택 (`livingroom`, `room1`, `room2`, `room3`, `kitchen`)
+- **room**: 방 선택 (`livingroom`, `room1`, `room2`, `room3`, `room4`, `kitchen`)
 
 같은 방에 조명이 여러 개라면 같은 항목을 여러 번 추가하면 번호가 자동 부여됩니다.  
 예) `light / livingroom` 2번 추가 → **거실 조명 1**, **거실 조명 2**

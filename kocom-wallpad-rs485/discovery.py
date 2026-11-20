@@ -67,6 +67,7 @@ _ROOM_KO: dict[str, str] = {
     'room1':      '방1',
     'room2':      '방2',
     'room3':      '방3',
+    'room4':      '방4',
     'kitchen':    '주방',
 }
 
