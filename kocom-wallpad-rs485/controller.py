@@ -25,6 +25,8 @@ from models import PacketFrame
 
 log = logging.getLogger(__name__)
 
+ELEVATOR_RESPONSE_TIMEOUT = 120
+
 StateCallback = Callable[[str, dict], Awaitable[None]]
 
 
@@ -43,6 +45,7 @@ class KocomController:
         self._state_cache:   dict[str, dict]  = {}   # 커맨드 조립용 최신 상태
         self._pub_cache:     dict[str, dict]  = {}   # 발행 중복 억제용
         self._device_storage: dict[str, Any]  = {}
+        self._elevator_timeout_task = None
 
         # ── 진단 카운터 ─────────────────────────────────────────
         # 월패드·EW11이 살아 있는지 HA에서 확인하기 위한 지표.
@@ -119,6 +122,14 @@ class KocomController:
         elif dt == 'gas':
             await self._pub_gas(frame)
         elif dt == 'elevator':
+            # 월패드의 엘리베이터 호출 요청 프레임 감지
+            # 실측 호출 프레임: packet_type=0x0B, command=0xFF
+            if frame.from_wallpad and frame.command == 0xFF:
+                self._start_elevator_timeout()
+            # 엘리베이터 장치에서 ACK가 돌아오면 타임아웃 취소
+            elif not frame.from_wallpad and frame.is_ack:
+                self._cancel_elevator_timeout()
+
             await self._pub_elevator(frame)
         elif dt == 'motion':
             await self._pub_motion(frame)
@@ -167,6 +178,41 @@ class KocomController:
 
     def _room(self, room_byte: int) -> str:
         return ROOM_NAME.get(room_byte, f'room{room_byte}')
+
+    def _start_elevator_timeout(self) -> None:
+        """엘리베이터 호출 응답 타임아웃 시작."""
+        self._cancel_elevator_timeout()
+        self._elevator_timeout_task = asyncio.create_task(
+            self._expire_elevator_call()
+        )
+
+    def _cancel_elevator_timeout(self) -> None:
+        """엘리베이터 응답이 확인되면 타임아웃 취소."""
+        task = self._elevator_timeout_task
+        self._elevator_timeout_task = None
+        if task is not None and not task.done():
+            task.cancel()
+
+    async def _expire_elevator_call(self) -> None:
+        """120초 동안 응답이 없으면 호출 상태를 idle로 초기화."""
+        try:
+            await asyncio.sleep(ELEVATOR_RESPONSE_TIMEOUT)
+            topic = 'kocom/myhome/elevator/state'
+            state = dict(self._state_cache.get(topic, {}))
+            state.update({
+                'state': 'off',
+                'direction': 'idle',
+            })
+            await self._notify(topic, state)
+            log.warning(
+                '[Elevator] No response for %s seconds; state reset to idle.',
+                ELEVATOR_RESPONSE_TIMEOUT,
+            )
+        except asyncio.CancelledError:
+            return
+        finally:
+            if self._elevator_timeout_task is asyncio.current_task():
+                self._elevator_timeout_task = None
 
     # ── 장치별 파싱 및 발행 ──────────────────────────────────────
     async def _pub_cutoff(self, frame: PacketFrame) -> None:
@@ -304,6 +350,11 @@ class KocomController:
             log.debug('[Elevator] Unknown payload[0]=0x%02x', frame.payload[0])
             return
 
+        if event == 'called':
+            self._start_elevator_timeout()
+        elif event == 'arrival':
+            self._cancel_elevator_timeout()
+
         state: dict = {
             'state':     'on' if event == 'called' else 'off',
             'direction': event,
@@ -329,6 +380,8 @@ class KocomController:
                 except ValueError:
                     pass
 
+        if state['state'] == 'off':
+            self._cancel_elevator_timeout()
         await self._notify('kocom/myhome/elevator/state', state)
 
     async def _pub_motion(self, frame: PacketFrame) -> None:
@@ -371,11 +424,11 @@ class KocomController:
         co2  = int.from_bytes(frame.payload[2:4], 'big')
         voc  = int.from_bytes(frame.payload[4:6], 'big')
         await self._notify(f'kocom/{room}/airquality/state', {
-            'pm10':     frame.payload[0],
-            'pm25':     frame.payload[1],
-            'co2':      co2,
-            'voc':      voc,
-            'temp':     frame.payload[6],
+            'pm10': frame.payload[0],
+            'pm25': frame.payload[1],
+            'co2':  co2,
+            'voc':  voc,
+            'temp': frame.payload[6],
             'humidity': frame.payload[7],
         })
 
@@ -418,10 +471,10 @@ class KocomController:
         d = self.diag
         now = time.time()
         return {
-            'rx_total':   d['rx_total'],
-            'rx_invalid': d['rx_invalid'],
-            'rx_retry':   d['rx_retry'],
-            'tx_total':   d['tx_total'],
+            'rx_total':       d['rx_total'],
+            'rx_invalid':     d['rx_invalid'],
+            'rx_retry':       d['rx_retry'],
+            'tx_total':       d['tx_total'],
             'error_rate': (round(d['rx_invalid'] / d['rx_total'] * 100, 2)
                            if d['rx_total'] else 0.0),
             'last_rx_age': (round(now - d['last_rx'], 1) if d['last_rx'] else None),
@@ -435,7 +488,7 @@ class KocomController:
     @staticmethod
     def _make_packet(
         dest_dev: int, dest_room: int,
-        src_dev:  int, src_room:  int,
+        src_dev:  int, src_room: int,
         command:  int, data: bytes,
         ptype:    int = PT_SEND,
     ) -> bytes:
@@ -478,6 +531,8 @@ class KocomController:
         if dev == 'gas':
             return [self._build_gas(room)]
         if dev == 'elevator':
+            if action == 'on':
+                self._start_elevator_timeout()
             return [self._build_elevator()]
         if dev == 'lightcutoff':
             return [self._build_cutoff(action == 'on')]

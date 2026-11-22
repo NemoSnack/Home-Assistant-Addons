@@ -1,6 +1,6 @@
 {
   "name": "Kocom Wallpad with RS485 (Custom)",
-  "version": "2026.11.21.2",
+  "version": "2026.11.23.1",
   "slug": "kocom_py_nemosnack",
   "description": "Kocom Wallpad for Home Assistant",
   "arch": [
@@ -73,7 +73,7 @@
     ],
     "elevator_type": "rs485",
     "rs485_floor": 18,
-    "init_temp": 22,
+    "init_temp": 23,
     "away_mode": "entrance",
     "away_gas_room": "livingroom",
     "log_recv_hex": false,
